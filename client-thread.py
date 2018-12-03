@@ -42,7 +42,7 @@ packet_size = 60000
 
 ip = sys.argv[1]
 fileName = sys.argv[2]
-filePath = "C:\\Users\\Sandman\\Desktop\\" + fileName
+filePath = "D:\\" + fileName
 file_size = os.path.getsize(filePath)
 file_sent = pickle.dumps(file_info(fileName, file_size))
 num_of_times = file_size / data_size
@@ -82,10 +82,10 @@ def print_progress():
     unit = 'Kbps'
     if count_dif > 0:
       if count_dif >= 100:
-        speed = count_dif / 1024.0
+        speed = count_dif * 10.0 / 1024.0
         unit = 'Mbps'
       else:
-        speed = count_dif / 10.0
+        speed = count_dif * 10.0
         unit = 'Kbps'
 
     percent = 100 * count / num_of_times
@@ -124,8 +124,9 @@ def resend():
     for _ in range(0, win_size):
       packet = windows.get()
       client_socket.sendto(packet, server_addr)
-      p = pickle.loads(packet)
-      #print("resend %d" % int(p.base))
+      #p = pickle.loads(packet)
+      #if packet[0] == "e":
+        #print("resend %d" % int(p.base))
       
       windows.put(packet)
   lock.release()
@@ -148,12 +149,13 @@ def receive():
     if start == 0:
       continue
     if rwnd != 0:
+      timer.cancel()
       timer = threading.Timer(time_limit, resend)
       timer.start()
     # if rwnd is 0, the transmit function will send(resend) packet
     response, _ = client_socket.recvfrom(packet_size)
     if response == "exit":
-      # print(" server exit") 
+      #print(" server exit") 
       end = 1
       timer.cancel()
       time.sleep(2)
@@ -222,9 +224,12 @@ def transmit():
         #print("put: %d" % nextseq)
         nextseq = (nextseq + 1) % seq_limit
       else:
-        # print(" send exit", end = '') 
+        #print(" send exit", end = '') 
         client_socket.sendto("exit " + str(nextseq), server_addr)
+        packet = "exit " + str(nextseq)
+        lock.acquire()
         windows.put(packet) # ?
+        lock.release()
         break
     if rwnd != 0:
       rwnd_count = 0
